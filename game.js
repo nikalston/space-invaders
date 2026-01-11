@@ -304,50 +304,143 @@ let alienSpeed = 1;
 let alienMoveDown = false;
 let alienShootTimer = 0;
 
-// Create player explosion
-function createPlayerExplosion(x, y) {
-    const colors = ['#ff0000', '#ff6600', '#ffff00', '#ffffff', '#ff3333', '#ffaa00'];
-    const particleCount = 50;
+// Screen shake
+let screenShake = 0;
+let flashAlpha = 0;
 
-    for (let i = 0; i < particleCount; i++) {
-        const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.5;
-        const speed = 2 + Math.random() * 6;
+// Create player explosion - SPECTACULAR!
+function createPlayerExplosion(x, y) {
+    // Screen shake and flash
+    screenShake = 25;
+    flashAlpha = 1;
+
+    // Primary explosion - hot core
+    const coreColors = ['#ffffff', '#ffffaa', '#ffff00', '#ffaa00'];
+    for (let i = 0; i < 40; i++) {
+        const angle = (Math.PI * 2 * i) / 40 + Math.random() * 0.3;
+        const speed = 4 + Math.random() * 8;
         explosionParticles.push({
             x: x,
             y: y,
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed,
-            life: 60 + Math.random() * 30,
-            maxLife: 90,
-            size: 3 + Math.random() * 5,
-            color: colors[Math.floor(Math.random() * colors.length)]
+            life: 40 + Math.random() * 20,
+            maxLife: 60,
+            size: 4 + Math.random() * 6,
+            color: coreColors[Math.floor(Math.random() * coreColors.length)],
+            type: 'spark'
         });
     }
 
-    // Add some debris chunks
-    for (let i = 0; i < 15; i++) {
+    // Secondary ring - fire
+    const fireColors = ['#ff6600', '#ff4400', '#ff2200', '#ff0000'];
+    for (let i = 0; i < 60; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = 1 + Math.random() * 3;
+        const speed = 2 + Math.random() * 5;
+        explosionParticles.push({
+            x: x + (Math.random() - 0.5) * 20,
+            y: y + (Math.random() - 0.5) * 20,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 1,
+            life: 50 + Math.random() * 40,
+            maxLife: 90,
+            size: 3 + Math.random() * 5,
+            color: fireColors[Math.floor(Math.random() * fireColors.length)],
+            type: 'fire'
+        });
+    }
+
+    // Pixel debris - ship chunks (chrome colored)
+    const debrisColors = ['#88aa88', '#669966', '#aaccaa', '#557755'];
+    for (let i = 0; i < 30; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 4;
         explosionParticles.push({
             x: x + (Math.random() - 0.5) * 30,
             y: y + (Math.random() - 0.5) * 20,
             vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed - 1,
-            life: 80 + Math.random() * 40,
-            maxLife: 120,
-            size: 5 + Math.random() * 8,
-            color: '#33ff33',
-            isDebris: true
+            vy: Math.sin(angle) * speed - 2,
+            life: 90 + Math.random() * 60,
+            maxLife: 150,
+            size: 4 + Math.random() * 8,
+            color: debrisColors[Math.floor(Math.random() * debrisColors.length)],
+            type: 'debris',
+            rotation: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.3
+        });
+    }
+
+    // Smoke trail
+    for (let i = 0; i < 25; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.5 + Math.random() * 2;
+        explosionParticles.push({
+            x: x + (Math.random() - 0.5) * 40,
+            y: y + (Math.random() - 0.5) * 30,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 0.5,
+            life: 80 + Math.random() * 50,
+            maxLife: 130,
+            size: 8 + Math.random() * 15,
+            color: '#444444',
+            type: 'smoke'
+        });
+    }
+
+    // Delayed secondary explosions
+    setTimeout(() => {
+        createSecondaryExplosion(x - 20 + Math.random() * 40, y - 10 + Math.random() * 20);
+    }, 100);
+    setTimeout(() => {
+        createSecondaryExplosion(x - 20 + Math.random() * 40, y - 10 + Math.random() * 20);
+    }, 200);
+    setTimeout(() => {
+        createSecondaryExplosion(x - 20 + Math.random() * 40, y - 10 + Math.random() * 20);
+    }, 350);
+}
+
+// Secondary smaller explosions
+function createSecondaryExplosion(x, y) {
+    screenShake = Math.max(screenShake, 10);
+    const colors = ['#ffff00', '#ff8800', '#ff4400'];
+    for (let i = 0; i < 20; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 4;
+        explosionParticles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 30 + Math.random() * 20,
+            maxLife: 50,
+            size: 3 + Math.random() * 4,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            type: 'spark'
         });
     }
 }
 
 // Update explosion particles
 function updateExplosionParticles() {
+    // Update screen shake
+    if (screenShake > 0) screenShake *= 0.9;
+    if (flashAlpha > 0) flashAlpha *= 0.85;
+
     explosionParticles = explosionParticles.filter(p => {
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.1; // gravity
+
+        if (p.type === 'smoke') {
+            p.vy -= 0.02; // smoke rises
+            p.vx *= 0.99;
+            p.size *= 1.01; // smoke expands
+        } else if (p.type === 'debris') {
+            p.vy += 0.15; // heavier gravity
+            p.rotation += p.rotSpeed;
+        } else {
+            p.vy += 0.08; // normal gravity
+        }
+
         p.vx *= 0.98; // drag
         p.life--;
         return p.life > 0;
@@ -360,19 +453,42 @@ function drawExplosionParticles() {
         const alpha = p.life / p.maxLife;
         ctx.globalAlpha = alpha;
 
-        if (p.isDebris) {
-            // Draw debris as rectangles
+        if (p.type === 'debris') {
+            // Rotating pixel debris
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
             ctx.fillStyle = p.color;
-            ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size * 0.6);
+            ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+            // Chrome highlight
+            ctx.fillStyle = `rgba(255,255,255,${alpha * 0.3})`;
+            ctx.fillRect(-p.size / 2, -p.size / 4, p.size - 1, 1);
+            ctx.restore();
+        } else if (p.type === 'smoke') {
+            // Fuzzy smoke
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = alpha * 0.4;
+            ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+        } else if (p.type === 'spark') {
+            // Bright sparks - pixel style
+            ctx.fillStyle = p.color;
+            const s = p.size * alpha;
+            ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
         } else {
-            // Draw particles as circles
+            // Fire particles
             ctx.fillStyle = p.color;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size * alpha, p.size * alpha);
         }
     });
     ctx.globalAlpha = 1;
+}
+
+// Draw flash effect
+function drawFlash() {
+    if (flashAlpha > 0.01) {
+        ctx.fillStyle = `rgba(255, 255, 200, ${flashAlpha * 0.7})`;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    }
 }
 
 // Initialize aliens
@@ -1052,6 +1168,14 @@ function drawScanlines() {
 
 // Main game loop
 function gameLoop() {
+    // Apply screen shake
+    ctx.save();
+    if (screenShake > 0.5) {
+        const shakeX = (Math.random() - 0.5) * screenShake;
+        const shakeY = (Math.random() - 0.5) * screenShake;
+        ctx.translate(shakeX, shakeY);
+    }
+
     // Draw simple background with stars
     updateStars();
     drawBackground();
@@ -1070,6 +1194,7 @@ function gameLoop() {
         drawPlayer();
         drawBullets();
         drawExplosionParticles();
+        drawFlash();
         drawUI();
     } else if (gameState === 'gameover') {
         updateExplosionParticles();
@@ -1079,9 +1204,12 @@ function gameLoop() {
         drawPlayer();
         drawBullets();
         drawExplosionParticles();
+        drawFlash();
         drawUI();
         drawGameOver();
     }
+
+    ctx.restore();
 
     // Draw CRT scanline effect
     drawScanlines();
