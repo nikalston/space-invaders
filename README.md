@@ -25,6 +25,7 @@ A classic Space Invaders clone with retro arcade aesthetics, built as a browser 
 | Left Arrow / A | Move left |
 | Right Arrow / D | Move right |
 | Space | Fire |
+| P | Pause / Resume |
 | Enter | Start / Restart |
 
 ## Scoring
