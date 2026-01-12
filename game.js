@@ -413,8 +413,11 @@ let flashAlpha = 0;
 
 // Level complete state
 let levelCompleteTimer = 0;
-const LEVEL_COMPLETE_DURATION = 180; // 3 seconds at 60fps
+const LEVEL_COMPLETE_DURATION = 90; // 1.5 seconds at 60fps
 let levelCompleteParticles = [];
+
+// Pause state
+let paused = false;
 
 // Create player explosion - SPECTACULAR!
 function createPlayerExplosion(x, y) {
@@ -768,8 +771,8 @@ function drawLevelComplete() {
     ctx.fillText(`LEVEL ${level} CLEARED`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
 
     // Next level preview
-    if (levelCompleteTimer < 90) {
-        const fadeIn = 1 - (levelCompleteTimer / 90);
+    if (levelCompleteTimer < 45) {
+        const fadeIn = 1 - (levelCompleteTimer / 45);
         ctx.globalAlpha = fadeIn;
         ctx.font = '24px Courier New';
         ctx.fillStyle = '#aaaaff';
@@ -1136,6 +1139,27 @@ function drawGameOver() {
     ctx.fillText('PRESS ENTER TO CONTINUE', CANVAS_WIDTH / 2, 450);
 }
 
+// Draw pause screen
+function drawPaused() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    ctx.textAlign = 'center';
+
+    // Paused text
+    ctx.font = 'bold 48px Courier New';
+    ctx.fillStyle = '#446644';
+    ctx.fillText('PAUSED', CANVAS_WIDTH / 2 + 2, CANVAS_HEIGHT / 2 - 20 + 2);
+    ctx.fillStyle = '#88cc88';
+    ctx.fillText('PAUSED', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20);
+
+    // Instructions
+    const pulse = Math.floor(Date.now() / 500) % 2;
+    ctx.fillStyle = pulse ? '#aaffaa' : '#668866';
+    ctx.font = '20px Courier New';
+    ctx.fillText('PRESS P TO RESUME', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 30);
+}
+
 // Update player
 function updatePlayer() {
     // Handle respawn timer
@@ -1413,6 +1437,7 @@ function resetGame() {
     playerDead = false;
     respawnTimer = 0;
     levelCompleteTimer = 0;
+    paused = false;
 
     createAliens();
     createShields();
@@ -1468,11 +1493,13 @@ function gameLoop() {
     if (gameState === 'start') {
         drawStartScreen();
     } else if (gameState === 'playing') {
-        updatePlayer();
-        updateAliens();
-        updateBullets();
-        checkCollisions();
-        updateExplosionParticles();
+        if (!paused) {
+            updatePlayer();
+            updateAliens();
+            updateBullets();
+            checkCollisions();
+            updateExplosionParticles();
+        }
 
         drawShields();
         drawAliens();
@@ -1481,6 +1508,10 @@ function gameLoop() {
         drawExplosionParticles();
         drawFlash();
         drawUI();
+
+        if (paused) {
+            drawPaused();
+        }
     } else if (gameState === 'levelcomplete') {
         updateLevelComplete();
         updateExplosionParticles();
@@ -1527,6 +1558,11 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         if (gameState === 'start' || gameState === 'gameover') {
             resetGame();
+        }
+    }
+    if (e.key === 'p' || e.key === 'P') {
+        if (gameState === 'playing') {
+            paused = !paused;
         }
     }
 });
